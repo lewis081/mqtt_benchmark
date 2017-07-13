@@ -186,15 +186,22 @@ ssl_opts([_|Opts], Acc) ->
     ssl_opts(Opts, Acc).
 
 client_id(PubSub, N, Opts) ->
-    Prefix =
-    case proplists:get_value(ifaddr, Opts) of
-        undefined ->
-            {ok, Host} = inet:gethostname(), Host;
-        IfAddr    ->
-            IfAddr
-    end,
-    list_to_binary(lists:concat([Prefix, "_bench_", atom_to_list(PubSub),
-                                    "_", N, "_", random:uniform(16#FFFFFFFF)])).
+    %clientid = proplists:get_value(clientId, Opts),
+    if
+	true ->
+	    list_to_binary(lists:concat(["uuid_", N]));
+	true ->
+	    Prefix =
+	    case proplists:get_value(ifaddr, Opts) of
+		undefined ->
+		    {ok, Host} = inet:gethostname(), Host;
+		IfAddr    ->
+		    IfAddr
+	    end,
+	    list_to_binary(lists:concat([Prefix, "_bench_", atom_to_list(PubSub),
+		                            "_", N, "_", random:uniform(16#FFFFFFFF)]))
+        
+    end.
 
 topics_opt(Opts) ->
     Topics = topics_opt(Opts, []),

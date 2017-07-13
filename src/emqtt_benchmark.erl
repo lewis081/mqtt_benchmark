@@ -26,14 +26,21 @@
 
 -define(TAB, eb_stats).
 
+pay_load(N) ->
+    list_to_binary(lists:concat(["{\"datas\":{\"green\":\"010402000178F0\",\"ngnum\":\"01040270295D2E\",\"oknum\":\"010402B914CAAF\",\"red\":\"0104020000B930\",\"total\":\"0104020000B930\",\"yellow\":\"0104020000B930\"},\"uuid\":\"uuid_", N, "\"}"])).
+
+%pay_load(N) ->
+%    list_to_binary(lists:concat(["{\"uuid_", N, "\"}"])).
+
 main(sub, Opts) ->
     start(sub, Opts);
 
 main(pub, Opts) ->
     Size    = proplists:get_value(size, Opts),
     %Payload = iolist_to_binary([O || O <- lists:duplicate(Size, "a")]),
-    Payload = list_to_binary(proplists:get_value(pl, Opts)),
-    start(pub, [{payload, Payload} | Opts]).
+    %Payload = list_to_binary(proplists:get_value(pl, Opts)),
+    %start(pub, [{payload, Payload} | Opts]).
+    start(pub, Opts).
 
 start(PubSub, Opts) ->
     prepare(), init(),
@@ -87,9 +94,11 @@ run(Parent, PubSub, Opts) ->
 run(_Parent, 0, _PubSub, _Opts) ->
     done;
 run(Parent, N, PubSub, Opts) ->
-    spawn(?MODULE, connect, [Parent, N+proplists:get_value(startnumber, Opts), PubSub, Opts]),
-	timer:sleep(proplists:get_value(interval, Opts)),
-	run(Parent, N-1, PubSub, Opts).
+    Payload = pay_load(N),
+    %opts = [{payload, Payload} | Opts],
+    spawn(?MODULE, connect, [Parent, N+proplists:get_value(startnumber, Opts), PubSub, [{payload, Payload} | Opts]]),
+	timer:sleep(proplists:get_value(interval, [{payload, Payload} | Opts])),
+	run(Parent, N-1, PubSub, [{payload, Payload} | Opts]).
     
 connect(Parent, N, PubSub, Opts) ->
     process_flag(trap_exit, true),

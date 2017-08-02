@@ -46,7 +46,7 @@ start(PubSub, Opts) ->
     prepare(), init(),
     spawn(?MODULE, run, [self(), PubSub, Opts]),
     timer:send_interval(1000, stats),
-    main_loop(os:timestamp(), 1+proplists:get_value(startnumber, Opts)).
+    main_loop(os:timestamp(), 1+proplists:get_value(startnumber, Opts), 0).
 
 prepare() ->
     application:ensure_all_started(emqtt_benchmark).
@@ -58,17 +58,18 @@ init() ->
     put({stats, sent}, 0),
     ets:insert(?TAB, {sent, 0}).
 
-main_loop(Uptime, Count) ->
+main_loop(Uptime, Count, PubCount) ->
+	%io:format("count: ~w~n", [PubCount]),
 	receive
 		{connected, _N, _Client} ->
 			io:format("conneted: ~w~n", [Count]),
-			main_loop(Uptime, Count+1);
+			main_loop(Uptime, Count+1, PubCount+1);
         stats ->
             print_stats(Uptime),
-			main_loop(Uptime, Count);
+			main_loop(Uptime, Count, PubCount+1);
         Msg ->
             io:format("~p~n", [Msg]),
-            main_loop(Uptime, Count)
+            main_loop(Uptime, Count, PubCount+1 )
 	end.
 
 print_stats(Uptime) ->
@@ -83,10 +84,19 @@ print_stats(Uptime, Key) ->
             Tdiff = timer:now_diff(os:timestamp(), Uptime) div 1000,
             io:format("~s(~w): total=~w, rate=~w(msg/sec)~n",
                         [Key, Tdiff, Val, Val - LastVal]),
+	    %process_flag(trap_exit, true),
             put({stats, Key}, Val);
         true  ->
             ok
     end.
+
+judgeVal(Val) ->
+    if 
+        Val == 500 ->
+            io:format("exit process")
+            %process_flag(trap_exit, true)
+    end.
+
 
 run(Parent, PubSub, Opts) ->
     run(Parent, proplists:get_value(count, Opts), PubSub, Opts).
@@ -94,6 +104,7 @@ run(Parent, PubSub, Opts) ->
 run(_Parent, 0, _PubSub, _Opts) ->
     done;
 run(Parent, N, PubSub, Opts) ->
+    %io:format("run---"),
     Payload = pay_load(N),
     %opts = [{payload, Payload} | Opts],
     spawn(?MODULE, connect, [Parent, N+proplists:get_value(startnumber, Opts), PubSub, [{payload, Payload} | Opts]]),
@@ -127,7 +138,17 @@ loop(N, Client, PubSub, Opts) ->
         publish ->
             publish(Client, Opts),
             ets:update_counter(?TAB, sent, {2, 1}),
-            loop(N, Client, PubSub, Opts);
+            %loop(N, Client, PubSub, Opts);
+            [{Key, Val}] = ets:lookup(?TAB, sent),
+            io:format("total=~w, ~n",
+                        [Val]),
+	    case Val =< 33 of
+                true ->
+		    loop(N, Client, PubSub, Opts);
+                false ->
+                    ok
+	    end;
+            
         {publish, _Topic, _Payload} ->
             ets:update_counter(?TAB, recv, {2, 1}),
             loop(N, Client, PubSub, Opts);
@@ -144,6 +165,7 @@ publish(Client, Opts) ->
                {retain, proplists:get_value(retain, Opts)}],
     Payload = proplists:get_value(payload, Opts),
     emqttc:publish(Client, topic_opt(Opts), Payload, Flags).
+    
 
 mqtt_opts(Opts) ->
     SslOpts = ssl_opts(Opts),

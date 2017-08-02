@@ -133,22 +133,26 @@ connect(Parent, N, PubSub, Opts) ->
         io:format("client ~p connect error: ~p~n", [N, Error])
     end.
 
+
+
 loop(N, Client, PubSub, Opts) ->
     receive
         publish ->
-            publish(Client, Opts),
-            ets:update_counter(?TAB, sent, {2, 1}),
+            %publish(Client, Opts),
+            %ets:update_counter(?TAB, sent, {2, 1}),
             %loop(N, Client, PubSub, Opts);
             [{Key, Val}] = ets:lookup(?TAB, sent),
-            io:format("total=~w, ~n",
-                        [Val]),
-	    case Val =< 33 of
+            %pubcount = proplists:get_value(count, Opts) - 1,
+	    case Val =< (8 - 1) of
                 true ->
+                    io:format("total=~w, ~n",
+                        [Val]),
+                    publish(Client, Opts),
+                    ets:update_counter(?TAB, sent, {2, 1}),
 		    loop(N, Client, PubSub, Opts);
                 false ->
                     ok
 	    end;
-            
         {publish, _Topic, _Payload} ->
             ets:update_counter(?TAB, recv, {2, 1}),
             loop(N, Client, PubSub, Opts);

@@ -26,8 +26,11 @@
 
 -define(TAB, eb_stats).
 
+%pay_load(N) ->
+%    list_to_binary(lists:concat(["{\"datas\":{\"green\":\"010402000178F0\",\"ngnum\":\"01040270295D2E\",\"oknum\":\"010402B914CAAF\",\"red\":\"0104020000B930\",\"total\":\"0104020000B930%\",\"yellow\":\"0104020000B930\"},\"uuid\":\"uuid_", N, "\"}"])).
+
 pay_load(N) ->
-    list_to_binary(lists:concat(["{\"datas\":{\"green\":\"010402000178F0\",\"ngnum\":\"01040270295D2E\",\"oknum\":\"010402B914CAAF\",\"red\":\"0104020000B930\",\"total\":\"0104020000B930\",\"yellow\":\"0104020000B930\"},\"uuid\":\"uuid_", N, "\"}"])).
+    list_to_binary(lists:concat(["{\"dbName\":\"key_", (N div 500) + 1, "\",\"sentense\":\"select * from oknum where uuid='uuid_", N, "' order by time desc limit 1\",\"id\":\"ecuuid_", N, "\"}"])).
 
 %pay_load(N) ->
 %    list_to_binary(lists:concat(["{\"uuid_", N, "\"}"])).
@@ -138,21 +141,20 @@ connect(Parent, N, PubSub, Opts) ->
 loop(N, Client, PubSub, Opts) ->
     receive
         publish ->
-            %publish(Client, Opts),
-            %ets:update_counter(?TAB, sent, {2, 1}),
-            %loop(N, Client, PubSub, Opts);
-            [{Key, Val}] = ets:lookup(?TAB, sent),
-            %pubcount = proplists:get_value(count, Opts) - 1,
-	    case Val =< (8 - 1) of
-                true ->
-                    io:format("total=~w, ~n",
-                        [Val]),
-                    publish(Client, Opts),
-                    ets:update_counter(?TAB, sent, {2, 1}),
-		    loop(N, Client, PubSub, Opts);
-                false ->
-                    ok
-	    end;
+            publish(Client, Opts),
+            ets:update_counter(?TAB, sent, {2, 1}),
+            loop(N, Client, PubSub, Opts);
+
+            %[{Key, Val}] = ets:lookup(?TAB, sent),
+	    %case Val =< (5000 - 1) of
+                %true ->
+                    %io:format("total=~w, ~n", [Val]),
+                 %   publish(Client, Opts),
+                 %   ets:update_counter(?TAB, sent, {2, 1}),
+		 %   loop(N, Client, PubSub, Opts);
+                %false ->
+                %    ok
+	    %end;
         {publish, _Topic, _Payload} ->
             ets:update_counter(?TAB, recv, {2, 1}),
             loop(N, Client, PubSub, Opts);

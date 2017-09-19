@@ -226,7 +226,8 @@ client_id(PubSub, N, Opts) ->
     %clientid = proplists:get_value(clientId, Opts),
     if
 	true ->
-	    list_to_binary(lists:concat(["uuid_", N]));
+            %list_to_binary(lists:concat(["uuidBox_", N]));
+	    list_to_binary(lists:concat(["uuidInfluxClient_", N]));
 	true ->
 	    Prefix =
 	    case proplists:get_value(ifaddr, Opts) of

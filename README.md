@@ -2,6 +2,11 @@
 
 This is a simple MQTT benchmark tool written in Erlang. The main purpose of the tool is to benchmark how many concurrent connections a MQTT broker could support.
 
+## Effect
+```sh
+1.模拟 多台device 发送采集数据
+2.模拟 多台device 请求显示数据
+```
 ## Build first
 
 ```sh

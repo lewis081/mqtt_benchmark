@@ -27,10 +27,10 @@
 -define(TAB, eb_stats).
 
 pay_load(N) ->
-   list_to_binary(lists:concat(["{\"datas\":{\"green\":\"010402000178F0\",\"ngnum\":\"01040270295D2E\",\"oknum\":\"010402B914CAAF\",\"red\":\"0104020000B930\",\"total\":\"0104020000B930\",\"yellow\":\"0104020000B930\"},\"uuid\":\"uuid_", N, "\",\"time_stamp\":\"", 1505890901079+N, "\"}"])).
+   list_to_binary(lists:concat(["{\"datas\":{\"green\":\"010402000178F0\",\"ngnum\":\"01040270295D2E\",\"oknum\":\"010402B914CAAF\",\"red\":\"0104020000B930\",\"total\":\"0104020000B930\",\"yellow\":\"0104020000B930\"},\"uuid\":\"uuid_", N, "\""])).
 
-time_stamp(N) ->
-    list_to_binary(lists:concat(["{\"time_stamp\":\"", 1505890901079+N, "\"}"])).
+time_stamp(Val) ->
+    list_to_binary(lists:concat([",\"time_stamp\":\" ", 1505898000000+Val," \"}"])).
 
 % pay_load(N) ->
 %     list_to_binary(lists:concat(["{\"dbName\":\"key_", (N div 500) + 1, "\",\"sentense\":\"select * from oknum where uuid='uuid_", N, "' order by time desc limit 1\",\"id\":\"ecuuid_", N, "\"}"])).
@@ -149,14 +149,22 @@ loop(N, Client, PubSub, Opts) ->
             % loop(N, Client, PubSub, Opts);
 
             [{Key, Val}] = ets:lookup(?TAB, sent),
-    	    case Val =< (100 - 1) of
-                    true ->
-                        io:format("total=~w", [Val]),
-                        publish(Client, Opts),
-                        ets:update_counter(?TAB, sent, {2, 1}),
-                        loop(N, Client, PubSub, Opts);
-                    false ->
-                       ok
+            case proplists:get_value(pubcount, Opts) =< 0 of
+                true ->
+                    io:format("total=~w ~n", [Val]),
+                    publish(Client, Opts),
+                    ets:update_counter(?TAB, sent, {2, 1}),
+                    loop(N, Client, PubSub, Opts);
+                false ->
+            	    case Val =< (proplists:get_value(pubcount, Opts) - 1) of
+                        true ->
+                            io:format("total=~w ~n", [Val]),
+                            publish(Client, Opts),
+                            ets:update_counter(?TAB, sent, {2, 1}),
+                            loop(N, Client, PubSub, Opts);
+                        false ->
+                           ok
+                    end
     	    end;
         {publish, _Topic, _Payload} ->
             ets:update_counter(?TAB, recv, {2, 1}),
@@ -173,7 +181,8 @@ publish(Client, Opts) ->
     Flags   = [{qos, proplists:get_value(qos, Opts)},
                {retain, proplists:get_value(retain, Opts)}],
     Payload = proplists:get_value(payload, Opts),
-    emqttc:publish(Client, topic_opt(Opts), Payload, Flags).
+    [{Key, Val}] = ets:lookup(?TAB, sent),
+    emqttc:publish(Client, topic_opt(Opts), list_to_binary(string:concat(binary_to_list(Payload), binary_to_list(time_stamp(Val)))), Flags).
     
 
 mqtt_opts(Opts) ->

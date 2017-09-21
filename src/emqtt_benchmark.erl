@@ -22,7 +22,7 @@
 
 -module(emqtt_benchmark).
 
--export([main/2, start/2, run/3, connect/4, loop/4]).
+-export([main/2, start/2, run/3, connect/4, loop/5]).
 
 -define(TAB, eb_stats).
 
@@ -65,6 +65,7 @@ main(sub, Opts) ->
     start(sub, Opts);
 
 main(pub, Opts) ->
+    Pid = self(),
     % Size    = proplists:get_value(size, Opts),
     %Payload = iolist_to_binary([O || O <- lists:duplicate(Size, "a")]),
     %start(pub, [{payload, Payload} | Opts]).
@@ -134,6 +135,7 @@ run(Parent, N, PubSub, Opts) ->
     
 connect(Parent, N, PubSub, Opts) ->
     process_flag(trap_exit, true),
+
     random:seed(os:timestamp()),
     ClientId = client_id(PubSub, N, Opts),
     MqttOpts = [{client_id, ClientId} | mqtt_opts(Opts)],
@@ -149,14 +151,14 @@ connect(Parent, N, PubSub, Opts) ->
                Interval = proplists:get_value(interval_of_msg, Opts),
                timer:send_interval(Interval, publish)
         end,
-        loop(N, Client, PubSub, AllOpts);
+        loop(Parent, N, Client, PubSub, AllOpts);
     {error, Error} ->
         io:format("client ~p connect error: ~p~n", [N, Error])
     end.
 
 
 
-loop(N, Client, PubSub, Opts) ->
+loop(Parent, N, Client, PubSub, Opts) ->
     receive
         publish ->
             % publish(Client, Opts),
@@ -166,24 +168,24 @@ loop(N, Client, PubSub, Opts) ->
             [{_, Val}] = ets:lookup(?TAB, sent),
             case proplists:get_value(pubcount, Opts) =< 0 of
                 true ->
-                    io:format("total=~w ~n", [Val]),
+                    % io:format("total=~w ~n", [Val]),
                     publish(Client, Opts),
                     ets:update_counter(?TAB, sent, {2, 1}),
-                    loop(N, Client, PubSub, Opts);
+                    loop(Parent, N, Client, PubSub, Opts);
                 false ->
             	    case Val =< (proplists:get_value(pubcount, Opts) - 1) of
                         true ->
-                            io:format("total=~w ~n", [Val]),
+                            % io:format("total=~w ~n", [Val]),
                             publish(Client, Opts),
                             ets:update_counter(?TAB, sent, {2, 1}),
-                            loop(N, Client, PubSub, Opts);
+                            loop(Parent, N, Client, PubSub, Opts);
                         false ->
-                           ok
+                            exit(Parent, kill)
                     end
     	    end;
         {publish, _Topic, _Payload} ->
             ets:update_counter(?TAB, recv, {2, 1}),
-            loop(N, Client, PubSub, Opts);
+            loop(Parent, N, Client, PubSub, Opts);
         {'EXIT', Client, Reason} ->
             io:format("client ~p EXIT: ~p~n", [N, Reason])
 	end.

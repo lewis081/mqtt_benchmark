@@ -26,25 +26,55 @@
 
 -define(TAB, eb_stats).
 
-pay_load(N) ->
-   list_to_binary(lists:concat(["{\"datas\":{\"green\":\"010402000178F0\",\"ngnum\":\"01040270295D2E\",\"oknum\":\"010402B914CAAF\",\"red\":\"0104020000B930\",\"total\":\"0104020000B930\",\"yellow\":\"0104020000B930\"},\"uuid\":\"uuid_", N, "\""])).
-
+%ADD BY LEWIS----
 time_stamp(Val) ->
     list_to_binary(lists:concat([",\"time_stamp\":\" ", 1505898000000+Val," \"}"])).
 
-% pay_load(N) ->
-%     list_to_binary(lists:concat(["{\"dbName\":\"key_", (N div 500) + 1, "\",\"sentense\":\"select * from oknum where uuid='uuid_", N, "' order by time desc limit 1\",\"id\":\"ecuuid_", N, "\"}"])).
+pay_load(N, Opts) ->
+    case proplists:get_value(workmode, Opts) of
+        "send"    ->  
+            list_to_binary(lists:concat(["{\"datas\":{\"green\":\"010402000178F0\",\"ngnum\":\"01040270295D2E\",\"oknum\":\"010402B914CAAF\",\"red\":\"0104020000B930\",\"total\":\"0104020000B930\",\"yellow\":\"0104020000B930\"},\"uuid\":\"uuid_", N, "\""]));  
+        "request" ->  
+            list_to_binary(lists:concat(["{\"dbName\":\"key_", (N div 500) + 1, "\",\"sentense\":\"select * from oknum where uuid='uuid_", N, "' order by time desc limit 1\",\"id\":\"ecuuid_", N, "\"}"]))
+    end.
 
-%pay_load(N) ->
-%    list_to_binary(lists:concat(["{\"uuid_", N, "\"}"])).
+sim_id(N, Opts) ->
+    case proplists:get_value(workmode, Opts) of
+        "send"    ->  
+            list_to_binary(lists:concat(["uuidBox_", N]));
+        "request" ->  
+            list_to_binary(lists:concat(["uuidInfluxClient_", N]))
+    end.
+
+getPayload(Payload, Opts) ->
+    case proplists:get_value(pl, Opts) == "none" of
+        true ->
+            case proplists:get_value(workmode, Opts) of
+                "send"    ->  
+                    [{_, Val}] = ets:lookup(?TAB, sent),
+                    list_to_binary(string:concat(binary_to_list(Payload), binary_to_list(time_stamp(Val))));
+                "request" ->  
+                    Payload
+            end;
+        false ->
+            list_to_binary(proplists:get_value(pl, Opts))
+    end.
+
+    % case proplists:get_value(workmode, Opts) of
+    %     "send"    ->  
+    %         [{_, Val}] = ets:lookup(?TAB, sent),
+    %         list_to_binary(string:concat(binary_to_list(Payload), binary_to_list(time_stamp(Val))));
+    %     "request" ->  
+    %         Payload
+    % end.
+%ADD BY LEWIS****
 
 main(sub, Opts) ->
     start(sub, Opts);
 
 main(pub, Opts) ->
-    Size    = proplists:get_value(size, Opts),
+    % Size    = proplists:get_value(size, Opts),
     %Payload = iolist_to_binary([O || O <- lists:duplicate(Size, "a")]),
-    %Payload = list_to_binary(proplists:get_value(pl, Opts)),
     %start(pub, [{payload, Payload} | Opts]).
     start(pub, Opts).
 
@@ -96,13 +126,6 @@ print_stats(Uptime, Key) ->
             ok
     end.
 
-judgeVal(Val) ->
-    if 
-        Val == 500 ->
-            io:format("exit process")
-            %process_flag(trap_exit, true)
-    end.
-
 
 run(Parent, PubSub, Opts) ->
     run(Parent, proplists:get_value(count, Opts), PubSub, Opts).
@@ -111,7 +134,7 @@ run(_Parent, 0, _PubSub, _Opts) ->
     done;
 run(Parent, N, PubSub, Opts) ->
     %io:format("run---"),
-    Payload = pay_load(N),
+    Payload = pay_load(N, Opts),
     %opts = [{payload, Payload} | Opts],
     spawn(?MODULE, connect, [Parent, N+proplists:get_value(startnumber, Opts), PubSub, [{payload, Payload} | Opts]]),
 	timer:sleep(proplists:get_value(interval, [{payload, Payload} | Opts])),
@@ -148,7 +171,7 @@ loop(N, Client, PubSub, Opts) ->
             % ets:update_counter(?TAB, sent, {2, 1}),
             % loop(N, Client, PubSub, Opts);
 
-            [{Key, Val}] = ets:lookup(?TAB, sent),
+            [{_, Val}] = ets:lookup(?TAB, sent),
             case proplists:get_value(pubcount, Opts) =< 0 of
                 true ->
                     io:format("total=~w ~n", [Val]),
@@ -177,12 +200,12 @@ subscribe(Client, Opts) ->
     Qos = proplists:get_value(qos, Opts),
     emqttc:subscribe(Client, [{Topic, Qos} || Topic <- topics_opt(Opts)]).
 
+% pub CORE
 publish(Client, Opts) ->
     Flags   = [{qos, proplists:get_value(qos, Opts)},
                {retain, proplists:get_value(retain, Opts)}],
     Payload = proplists:get_value(payload, Opts),
-    [{Key, Val}] = ets:lookup(?TAB, sent),
-    emqttc:publish(Client, topic_opt(Opts), list_to_binary(string:concat(binary_to_list(Payload), binary_to_list(time_stamp(Val)))), Flags).
+    emqttc:publish(Client, topic_opt(Opts), getPayload(Payload, Opts), Flags).
     
 
 mqtt_opts(Opts) ->
@@ -234,22 +257,23 @@ ssl_opts([{certfile, CertFile} | Opts], Acc) ->
 ssl_opts([_|Opts], Acc) ->
     ssl_opts(Opts, Acc).
 
+
 client_id(PubSub, N, Opts) ->
+    _ = PubSub,
     %clientid = proplists:get_value(clientId, Opts),
     if
 	true ->
-            list_to_binary(lists:concat(["uuidBox_", N]));
-	    % list_to_binary(lists:concat(["uuidInfluxClient_", N]));
-	true ->
-	    Prefix =
-	    case proplists:get_value(ifaddr, Opts) of
-		undefined ->
-		    {ok, Host} = inet:gethostname(), Host;
-		IfAddr    ->
-		    IfAddr
-	    end,
-	    list_to_binary(lists:concat([Prefix, "_bench_", atom_to_list(PubSub),
-		                            "_", N, "_", random:uniform(16#FFFFFFFF)]))
+        sim_id(N, Opts)
+	% true->
+	%     Prefix =
+	%     case proplists:get_value(ifaddr, Opts) of
+	% 	undefined ->
+	% 	    {ok, Host} = inet:gethostname(), Host;
+	% 	IfAddr    ->
+	% 	    IfAddr
+	%     end,
+	%     list_to_binary(lists:concat([Prefix, "_bench_", atom_to_list(PubSub),
+	% 	                            "_", N, "_", random:uniform(16#FFFFFFFF)]))
         
     end.
 

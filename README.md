@@ -72,6 +72,10 @@ Usage: emqtt_bench_pub [--help <help>] [-h [<host>]] [-p [<port>]]
   -k, --keepalive        keep alive in seconds [default: 300]
   -C, --clean            clean session [default: true]
   --ifaddr               local ipaddress or interface address
+
+      --pubcount         specify publish count. default -1 indicates no limit count 
+      --workmode         suppuort send and request now. default is send mode
+      --payload          specify payload. default none indicates use send or request specified payload 
 ```
 
 For example, create 100 clients and each client publish messages at the rate of 100 msg/sec.

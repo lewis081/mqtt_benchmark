@@ -11,8 +11,6 @@
           "mqtt server port number"},
          {count, $c, "count", {integer, 200},
           "max count of clients"},
-         {pubcount, $b, "pubcount", {integer, -1},
-          "pub counts, =< 0 indicates no limit, > 1 indicates specified pub counts"},
          {startnumber, $n, "startnumber", {integer, 0}, "start number"},
          {interval, $i, "interval", {integer, 10},
           "interval of connecting to the broker"},
@@ -24,8 +22,6 @@
           "password for connecting to server"},
          {topic, $t, "topic", string,
           "topic subscribe, support %u, %c, %i variables"},
-         {pl, $L, "payload", {string, "emqtt_benchmark"},
-          "payload text"},
          {size, $s, "size", {integer, 256},
           "payload size"},
          {qos, $q, "qos", {integer, 0},
@@ -43,7 +39,13 @@
          {keyfile, undefined, "keyfile", string,
           "client private key for authentication, if required by server"},
          {ifaddr, undefined, "ifaddr", string,
-          "local ipaddress or interface address"}
+          "local ipaddress or interface address"},
+          {pubcount, undefined, "pubcount", {integer, -1},
+          "pub counts, =< 0 indicates no limit, > 1 indicates specified pub counts"},
+          {pl, undefined, "payload", {string, "none"},
+          "payload text"},
+          {workmode, undefined, "workmode", {string, "send"},
+          "workmode: send or request. default is send"}
         ]).
 
 main(Argv) ->

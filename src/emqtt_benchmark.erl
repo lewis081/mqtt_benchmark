@@ -59,14 +59,6 @@ getPayload(Payload, Opts) ->
         false ->
             list_to_binary(proplists:get_value(pl, Opts))
     end.
-
-    % case proplists:get_value(workmode, Opts) of
-    %     "send"    ->  
-    %         [{_, Val}] = ets:lookup(?TAB, sent),
-    %         list_to_binary(string:concat(binary_to_list(Payload), binary_to_list(time_stamp(Val))));
-    %     "request" ->  
-    %         Payload
-    % end.
 %ADD BY LEWIS****
 
 main(sub, Opts) ->

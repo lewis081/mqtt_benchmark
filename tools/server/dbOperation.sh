@@ -76,7 +76,7 @@ setDefaultValues
 for((company=$startIdx;company<=$endIdx;company++))
 do
     if [ $operation == "insert" ];then
-	mysql -u$user -p$passw $database -e "insert into company(company_key,name)values('key_$company','name_$company');"
+	mysql -u$user -p$passw $database -e "insert into company(access_key,name)values('key_$company','name_$company');"
 	influx -username $userInflux -password $passwInflux -execute "create database key_$company"
     elif [ $operation == "delete" ];then
     	mysql -u$user -p$passw $database -e "delete from company where name = 'name_$company';" 
@@ -99,7 +99,7 @@ do
 		curTime=$(date +%s)000
 		
 		data="{\"line\": \"\", \"name\": \"f\", \"type\": 0, \"uuid\": \"$uuid\", \"online\": false, \"factory\": \"\", \"station\": 2, \"workshop\": \"\", \"company_key\": \"$key\", \"create_time\": \"$curTime\", \"description\": \"\", \"last_active_time\": \"0\"}"
-		mysql -u$user -p$passw $database -e "insert into device(uuid,company_key,data)values('$uuid','$key','$data');"
+		mysql -u$user -p$passw $database -e "insert into device(uuid,access_key,data)values('$uuid','$key','$data');"
 
 		params="{\"uuid\": \"$uuid\", \"port_type\": 0, \"access_key\": \"$key\", \"data_field\": [{\"key\": \"oknum\", \"name\": \"良品\", \"type\": 1, \"value\": \"\", \"reponse\": \"\", \"request\": \"\", \"is_extra\": false, \"protocol_param\": {\"adu_type\": 1, \"quantity\": 1, \"func_code\": 4, \"slave_num\": 1, \"byte_order\": 0, \"start_addr\": 0}}, {\"key\": \"ngnum\", \"name\": \"不良品\", \"type\": 1, \"value\": \"\", \"reponse\": \"\", \"request\": \"\", \"is_extra\": false, \"protocol_param\": {\"adu_type\": 1, \"quantity\": 1, \"func_code\": 4, \"slave_num\": 1, \"byte_order\": 0, \"start_addr\": 1}}, {\"key\": \"total\", \"name\": \"总数\", \"type\": 3, \"value\": \"\", \"reponse\": \"\", \"request\": \"\", \"is_extra\": false, \"protocol_param\": {\"adu_type\": 1, \"quantity\": 2, \"func_code\": 4, \"slave_num\": 1, \"byte_order\": 0, \"start_addr\": 2}}, {\"key\": \"red\", \"name\": \"红\", \"type\": 1, \"value\": \"\", \"reponse\": \"\", \"request\": \"\", \"is_extra\": false, \"protocol_param\": {\"adu_type\": 1, \"quantity\": 1, \"func_code\": 4, \"slave_num\": 1, \"byte_order\": 0, \"start_addr\": 4}}, {\"key\": \"yellow\", \"name\": \"黄\", \"type\": 1, \"value\": \"\", \"reponse\": \"\", \"request\": \"\", \"is_extra\": false, \"protocol_param\": {\"adu_type\": 1, \"quantity\": 1, \"func_code\": 4, \"slave_num\": 1, \"byte_order\": 0, \"start_addr\": 5}}, {\"key\": \"green\", \"name\": \"绿\", \"type\": 1, \"value\": \"\", \"reponse\": \"\", \"request\": \"\", \"is_extra\": false, \"protocol_param\": {\"adu_type\": 1, \"quantity\": 1, \"func_code\": 4, \"slave_num\": 1, \"byte_order\": 0, \"start_addr\": 6}}], \"port_param\": {}, \"protocol_id\": \"Modbus\", \"polling_interval\": 100}"
 		#mysql -u$user -p$passw $database -e "insert into device_pollparam(uuid,access_key,data)values('$uuid','$key','$params');"

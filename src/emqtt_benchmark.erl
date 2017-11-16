@@ -28,7 +28,11 @@
 
 %ADD BY LEWIS----
 time_stamp(Val) ->
-    list_to_binary(lists:concat([",\"time_stamp\":\" ", 1505898000000+Val," \"}"])).
+    % list_to_binary(lists:concat([",\"time_stamp\":\"", 1505898000000+Val,"\"}"])).
+    {MegaS1, S1, MicroS1} = os:timestamp(),
+    % io:format("timestamp: [~w ~w ~6w] (~w)~n",
+    %                             [MegaS1, S1, MicroS1, (MegaS1 * 1000000 + S1)*1000 + round(MicroS1/1000)]),
+    list_to_binary(lists:concat([",\"time_stamp\":\"", (MegaS1 * 1000000 + S1)*1000 + round(MicroS1/1000),"\"}"])).
 
 pay_load(N, Opts) ->
     case proplists:get_value(workmode, Opts) of
@@ -69,6 +73,7 @@ main(pub, Opts) ->
     % Size    = proplists:get_value(size, Opts),
     %Payload = iolist_to_binary([O || O <- lists:duplicate(Size, "a")]),
     %start(pub, [{payload, Payload} | Opts]).
+    
     start(pub, Opts).
 
 start(PubSub, Opts) ->

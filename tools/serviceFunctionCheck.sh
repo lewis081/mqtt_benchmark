@@ -43,7 +43,7 @@ echo ----------------------------------
 ./exampleinfluxdbcheck query
 
 
-# ../emqtt_bench_pub -c 50 -i 100 -I 1000 -t omma/influxClient/query -u janpos -P janpos -h 101.37.69.122 --workmode request
+# ./emqtt_bench_pub -c 50 -i 100 -I 1000 -t omma/influxClient/query -u janpos -P janpos -h 101.37.69.122 --workmode request
 
 #RESTORE PATH AFTER WORK DONE 
 cd $callAbPath
